@@ -1,0 +1,13 @@
+{
+  "properties": [
+    {
+      "id": 1,
+      "address": "רחוב דיזנגוף 100",
+      "city": "תל אביב",
+      "price": 450000,
+      "score": 87,
+      "type": "apartment"
+    }
+  ],
+  "lastUpdate": "2026-05-19T12:24:56.557Z"
+}
