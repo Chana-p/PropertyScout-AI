@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url'
 import logger from '../utils/logger.js'
 import { analyzeProperties } from '../agents/analyzer.js'
 import { generatePropertyPDF } from '../utils/pdf-generator.js'
+import { generatePropertyExcel } from '../utils/excel-generator.js'
+import { sendPropertyEmail } from '../utils/emailer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = path.join(__dirname, '../../data')
@@ -155,8 +157,19 @@ export async function exportPDF(req, res) {
 
 export async function exportExcel(req, res) {
   try {
-    // TODO: Implement Excel export
-    res.status(501).json({ error: 'Excel export not yet implemented' })
+    const { properties } = req.body
+
+    if (!properties || !Array.isArray(properties)) {
+      return res.status(400).json({ error: 'Invalid properties data' })
+    }
+
+    const excelBuffer = generatePropertyExcel(properties)
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', 'attachment; filename="properties.xlsx"')
+    res.send(excelBuffer)
+
+    logger.info(`Exported ${properties.length} properties as Excel`)
   } catch (error) {
     logger.error('Error exporting Excel', error.message)
     res.status(500).json({ error: 'Failed to export Excel' })
@@ -167,13 +180,18 @@ export async function shareEmail(req, res) {
   try {
     const { email, properties } = req.body
 
-    if (!email || !properties) {
-      return res.status(400).json({ error: 'Missing email or properties' })
+    if (!email || !properties || !Array.isArray(properties)) {
+      return res.status(400).json({ error: 'Missing or invalid email or properties' })
     }
 
-    // TODO: Implement email sending with nodemailer
-    logger.info(`Would send email to ${email} with ${properties.length} properties`)
-    res.json({ success: true, message: 'Email sending not yet implemented' })
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' })
+    }
+
+    await sendPropertyEmail(email, properties)
+    logger.info(`Sent properties email to ${email}`)
+    res.json({ success: true, message: `Email sent to ${email}` })
   } catch (error) {
     logger.error('Error sending email', error.message)
     res.status(500).json({ error: 'Failed to send email' })
@@ -184,15 +202,34 @@ export async function shareWhatsApp(req, res) {
   try {
     const { phone, properties } = req.body
 
-    if (!phone || !properties) {
-      return res.status(400).json({ error: 'Missing phone or properties' })
+    if (!phone || !properties || !Array.isArray(properties)) {
+      return res.status(400).json({ error: 'Missing or invalid phone or properties' })
     }
 
-    // TODO: Implement WhatsApp sharing with Twilio
-    logger.info(`Would share with WhatsApp ${phone} with ${properties.length} properties`)
-    res.json({ success: true, message: 'WhatsApp sharing not yet implemented' })
+    // Create WhatsApp message with property summary
+    const propertyCount = properties.length
+    const totalPrice = properties.reduce((sum, p) => sum + (p.price || 0), 0)
+
+    const message = `
+מצאתי ${propertyCount} נכסים לפיכם:
+סה"כ מחיר משוער: ₪${totalPrice.toLocaleString('he-IL')}
+
+עיינו במערכת PropertyScout AI לפרטים מלאים!
+    `.trim()
+
+    // Encode for WhatsApp URL
+    const encodedMessage = encodeURIComponent(message)
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`
+
+    logger.info(`Created WhatsApp share link for ${phone}`)
+    res.json({
+      success: true,
+      message: 'WhatsApp link created',
+      url: whatsappUrl,
+      directShare: `https://wa.me/${phone}`
+    })
   } catch (error) {
-    logger.error('Error sharing WhatsApp', error.message)
-    res.status(500).json({ error: 'Failed to share' })
+    logger.error('Error creating WhatsApp link', error.message)
+    res.status(500).json({ error: 'Failed to create WhatsApp link' })
   }
 }
