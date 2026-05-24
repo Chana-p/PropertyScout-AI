@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import logger from '../utils/logger.js'
 import { analyzeProperties } from '../agents/analyzer.js'
+import { generatePropertyPDF } from '../utils/pdf-generator.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = path.join(__dirname, '../../data')
@@ -133,8 +134,19 @@ export async function exportJSON(req, res) {
 
 export async function exportPDF(req, res) {
   try {
-    // TODO: Implement PDF generation with pdfkit
-    res.status(501).json({ error: 'PDF export not yet implemented' })
+    const { properties } = req.body
+
+    if (!properties || !Array.isArray(properties)) {
+      return res.status(400).json({ error: 'Invalid properties data' })
+    }
+
+    const pdfBuffer = await generatePropertyPDF(properties)
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'attachment; filename="properties.pdf"')
+    res.send(pdfBuffer)
+
+    logger.info(`Exported ${properties.length} properties as PDF`)
   } catch (error) {
     logger.error('Error exporting PDF', error.message)
     res.status(500).json({ error: 'Failed to export PDF' })
