@@ -14,7 +14,8 @@ services:
     name: propertyscout-frontend
     runtime: node
     buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npx serve -s dist -l $PORT
+    startCommand: cd frontend && npx serve -s ./dist -l $PORT
+    publishDirectory: frontend/dist
     envVars:
       - key: NODE_VERSION
         value: 24.14.1
