@@ -10,14 +10,10 @@ services:
       - key: FRONTEND_URL
         value: https://propertyscout-frontend.onrender.com
 
-  - type: web
+  - type: static
     name: propertyscout-frontend
-    runtime: node
     buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npx serve -s ./dist -l $PORT
     publishDirectory: frontend/dist
     envVars:
-      - key: NODE_VERSION
-        value: 24.14.1
       - key: VITE_API_URL
         value: https://propertyscout-backend.onrender.com/api
